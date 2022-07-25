@@ -307,3 +307,20 @@ type bufCloser struct {
 
 func (bufCloser) Close() error                 { return nil }
 func (n bufCloser) BytesBuffer() *bytes.Buffer { return n.Buffer }
+
+func TestHandler_Returns4xxForAllParserErrors(t *testing.T) {
+	parserFunc := func(context.Context, *http.Request, int, []byte, *mimirpb.PreallocWriteRequest) ([]byte, error) {
+		return nil, fmt.Errorf("something's wrong")
+	}
+	pushFunc := func(ctx context.Context, req *Request) (*mimirpb.WriteResponse, error) {
+		_, err := req.WriteRequest(ctx) // just read the body so we can trigger the parser
+		return nil, err
+	}
+
+	h := handler(10, nil, false, pushFunc, parserFunc)
+
+	recorder := httptest.NewRecorder()
+	h.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/push", bufCloser{&bytes.Buffer{}}))
+
+	assert.Equal(t, http.StatusBadRequest, recorder.Code)
+}

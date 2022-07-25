@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/weaveworks/common/httpgrpc"
+
 	"github.com/grafana/mimir/pkg/mimirpb"
 )
 
@@ -27,10 +29,8 @@ func (r *Request) parseRequest(ctx context.Context) {
 	var req mimirpb.PreallocWriteRequest
 	buf, err := r.parser(ctx, r.httpReq, r.maxMessageSize, bufHolder.buf, &req)
 	if err != nil {
-		//level.Error(logger).Log("err", err.Error())
-		//http.Error(w, err.Error(), http.StatusBadRequest)
 		bufferPool.Put(bufHolder)
-		r.parseError = err
+		r.parseError = httpgrpc.Errorf(http.StatusBadRequest, err.Error())
 		return
 	}
 	// If decoding allocated a bigger buffer, put that one back in the pool.
