@@ -623,6 +623,7 @@ func (d *Distributor) PrePushLimitsMiddleware(next push.Func) push.Func {
 		// We will report *this* request in the error too.
 		inflight := d.inflightPushRequests.Inc()
 		req.AddCleanup(func() {
+			// Decrement counter after all ingester calls have finished or been cancelled.
 			d.inflightPushRequests.Dec()
 		})
 
@@ -664,7 +665,6 @@ func (d *Distributor) checkPrePushLimits(ctx context.Context, inflight int64) er
 
 // Push is gRPC method registered as client.IngesterServer and distributor.DistributorServer.
 func (d *Distributor) Push(ctx context.Context, req *mimirpb.WriteRequest) (*mimirpb.WriteResponse, error) {
-	// Decrement counter after all ingester calls have finished or been cancelled.
 	pushReq := push.NewParsedRequest(req)
 	pushReq.AddCleanup(func() { mimirpb.ReuseSlice(req.Timeseries) })
 
