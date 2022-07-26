@@ -28,6 +28,7 @@ func (r *Request) parseRequest(ctx context.Context) {
 	bufHolder := bufferPool.Get().(*bufHolder)
 	var req mimirpb.PreallocWriteRequest
 	buf, err := r.parser(ctx, r.httpReq, r.maxMessageSize, bufHolder.buf, &req)
+	buf = buf[:cap(buf)]
 	if err != nil {
 		bufferPool.Put(bufHolder)
 		r.parseError = httpgrpc.Errorf(http.StatusBadRequest, err.Error())
